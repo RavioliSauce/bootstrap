@@ -62,10 +62,16 @@ npm_installs() {
 }
 
 nvm_installs() {
-  mkdir -p "$HOME/.nvm"
-  curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash
   export NVM_DIR="$HOME/.nvm"
+  mkdir -p "$NVM_DIR"
+
+  if [ ! -s "$NVM_DIR/nvm.sh" ]; then
+    PROFILE=/dev/null NVM_DIR="$NVM_DIR" bash -c 'curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash'
+  fi
+
+  [ -s "$NVM_DIR/nvm.sh" ] || error "nvm install did not create $NVM_DIR/nvm.sh"
   [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+  command -v nvm >/dev/null 2>&1 || error "nvm failed to load"
   nvm install --lts
 }
 
