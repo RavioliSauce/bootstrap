@@ -64,9 +64,8 @@ run_remote_scripts() {
 }
 
 run_cmds() {
-  gh auth login
   sudo tailscale up
-
+  source "$HOME/.bashrc"
 }
 
 
