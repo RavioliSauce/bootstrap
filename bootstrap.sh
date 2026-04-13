@@ -50,6 +50,25 @@ github_install() {
   trap - RETURN
 }
 
+uv_installs() {
+  export PATH="$HOME/.local/bin:$PATH"
+  uv tool install tldr
+  uv tool install ruff
+}
+
+npm_installs() {
+  export PATH="$HOME/.local/bin:$PATH"
+  npm i -g @openai/codex
+}
+
+nvm_installs() {
+  mkdir -p "$HOME/.nvm"
+  curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.4/install.sh | bash
+  export NVM_DIR="$HOME/.nvm"
+  [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+  nvm install --lts
+}
+
 install_packages() {
   sudo apt-get update
   sudo apt-get install -y git curl jq unzip fontconfig tmux ripgrep fzf micro glow btop
@@ -57,17 +76,19 @@ install_packages() {
 }
 
 run_remote_scripts() {
-  sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply "$GITHUB_USERNAME"
-  curl -fsSL https://tailscale.com/install.sh | sh
   curl -LsSf https://astral.sh/uv/install.sh | sh
+  uv_installs
+
+  sh -c "$(curl -fsLS get.chezmoi.io/lb)" -- init --apply "$GITHUB_USERNAME"
+  curl -fsSL https://tailscale.com/install.sh | sh
   curl -fsSL https://deno.land/install.sh | sh
+  nvm_installs
+  npm_installs
 }
 
 run_cmds() {
   sudo tailscale up
-  source "$HOME/.bashrc"
 }
-
 
 main() {
 
@@ -79,7 +100,7 @@ main() {
 
   run_cmds
 
-  log "Bootstrap complete"
+  log "Bootstrap complete, don't forget to log in with 'gh auth login' and 'codex login --device-auth'"
 }
 
 main "$@"
