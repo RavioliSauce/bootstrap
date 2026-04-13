@@ -28,7 +28,7 @@ github_install() {
   fi
 
   out="$(mktemp)"
-  trap 'rm -f "$out"' RETURN
+  trap 'rm -f "${out:-}"' RETURN
 
   if ! command -v wget >/dev/null 2>&1; then
     sudo apt-get update
@@ -46,6 +46,8 @@ github_install() {
 
   sudo apt-get update
   sudo apt-get install -y gh
+  rm -f "$out"
+  trap - RETURN
 }
 
 install_packages() {
@@ -57,10 +59,14 @@ install_packages() {
 run_remote_scripts() {
   sh -c "$(curl -fsLS get.chezmoi.io)" -- init --apply "$GITHUB_USERNAME"
   curl -fsSL https://tailscale.com/install.sh | sh
+  curl -LsSf https://astral.sh/uv/install.sh | sh
+  curl -fsSL https://deno.land/install.sh | sh
 }
 
 run_cmds() {
+  gh auth login
   sudo tailscale up
+
 }
 
 
