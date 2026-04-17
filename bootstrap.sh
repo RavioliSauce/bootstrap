@@ -108,7 +108,6 @@ run_cmds() {
   mkdir -p "$HOME/Pictures"
   background_image
   font_install
-  sudo tailscale up
 }
 
 main() {
@@ -121,7 +120,7 @@ main() {
 
   run_cmds
 
-  log "Bootstrap complete, don't forget to log in with 'gh auth login' and 'codex login --device-auth'"
+  log "Bootstrap complete, don't forget to log in with 'gh auth login', 'codex login --device-auth', and 'sudo tailscale up'"
 }
 
 main "$@"
