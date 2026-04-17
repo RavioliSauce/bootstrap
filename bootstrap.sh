@@ -89,7 +89,7 @@ nvm_installs() {
 
 install_packages() {
   sudo apt-get update
-  sudo apt-get install -y git curl jq unzip fontconfig tmux ripgrep fzf micro glow btop bspwm sxhkd dunst polybar picom alacritty dpkg-dev build-essential
+  sudo apt-get install -y git curl jq unzip fontconfig tmux ripgrep fzf micro glow btop bspwm sxhkd dunst polybar picom alacritty build-essential xorg
   github_install
 }
 
