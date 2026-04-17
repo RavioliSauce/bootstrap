@@ -19,6 +19,18 @@ check_environment() {
   done
 }
 
+background_image() {
+  wget --user-agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36" -O "$HOME/Pictures/picture.jpg" "https://images.pexels.com/photos/36315456/pexels-photo-36315456.jpeg?w=1920&h=1280"
+}
+
+font_install() {
+  mkdir -p ~/.local/share/fonts
+  wget -P ~/.local/share/fonts https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip
+  unzip -o ~/.local/share/fonts/JetBrainsMono.zip -d ~/.local/share/fonts/
+  fc-cache -fv
+  rm -f ~/.local/share/fonts/JetBrainsMono.zip
+}
+
 github_install() {
   local out
 
@@ -37,7 +49,7 @@ github_install() {
 
   sudo mkdir -p -m 755 /etc/apt/keyrings
   wget -nv -O"$out" https://cli.github.com/packages/githubcli-archive-keyring.gpg
-  sudo tee /etc/apt/keyrings/githubcli-archive-keyring.gpg >/dev/null < "$out"
+  sudo install -m 644 "$out" /etc/apt/keyrings/githubcli-archive-keyring.gpg
   sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg
 
   sudo mkdir -p -m 755 /etc/apt/sources.list.d
@@ -77,7 +89,7 @@ nvm_installs() {
 
 install_packages() {
   sudo apt-get update
-  sudo apt-get install -y git curl jq unzip fontconfig tmux ripgrep fzf micro glow btop
+  sudo apt-get install -y git curl jq unzip fontconfig tmux ripgrep fzf micro glow btop bspwm sxhkd dunst polybar picom alacritty
   github_install
 }
 
@@ -93,6 +105,9 @@ run_remote_scripts() {
 }
 
 run_cmds() {
+  mkdir -p "$HOME/Pictures"
+  background_image
+  font_install
   sudo tailscale up
 }
 
