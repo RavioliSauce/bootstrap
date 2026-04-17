@@ -11,6 +11,31 @@ error() {
   exit 1
 }
 
+APT_PACKAGES=(
+  git
+  curl
+  jq
+  unzip
+  wget
+  fontconfig
+  tmux
+  ripgrep
+  fzf
+  micro
+  glow
+  btop
+  bspwm
+  rofi
+  sxhkd
+  feh
+  dunst
+  polybar
+  picom
+  alacritty
+  build-essential
+  xorg
+)
+
 check_environment() {
   for var in "$@"; do
     if [[ -z "${!var:-}" ]]; then
@@ -89,7 +114,7 @@ nvm_installs() {
 
 install_packages() {
   sudo apt-get update
-  sudo apt-get install -y git curl jq unzip fontconfig tmux ripgrep fzf micro glow btop bspwm sxhkd dunst polybar picom alacritty build-essential xorg
+  sudo apt-get install -y "${APT_PACKAGES[@]}"
   github_install
 }
 
