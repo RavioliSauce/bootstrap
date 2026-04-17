@@ -120,7 +120,7 @@ main() {
 
   run_cmds
 
-  log "Bootstrap complete, don't forget to log in with 'gh auth login', 'codex login --device-auth', and 'sudo tailscale up'"
+  log "Bootstrap complete, don't forget to do 'gh auth login', 'codex login --device-auth', and 'sudo tailscale up'"
 }
 
 main "$@"
