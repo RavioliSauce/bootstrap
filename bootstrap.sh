@@ -28,6 +28,7 @@ APT_PACKAGES=(
   rofi
   sxhkd
   feh
+  fonts-noto-color-emoji
   dunst
   polybar
   picom
