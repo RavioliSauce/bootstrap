@@ -23,6 +23,7 @@ APT_PACKAGES=(
   fzf
   micro
   glow
+  bat
   btop
   bspwm
   rofi
