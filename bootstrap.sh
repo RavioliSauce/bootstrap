@@ -22,7 +22,6 @@ APT_PACKAGES=(
   ripgrep
   fzf
   micro
-  glow
   bat
   btop
   bspwm
