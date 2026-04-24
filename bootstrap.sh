@@ -42,6 +42,9 @@ APT_PACKAGES=(
   gvfs
   gvfs-backends
   gvfs-fuse
+  pipewire-audio
+  alsa-utils
+  rtkit
 )
 
 check_environment() {
