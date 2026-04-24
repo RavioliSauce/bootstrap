@@ -33,8 +33,15 @@ APT_PACKAGES=(
   polybar
   picom
   alacritty
+  thunar
   build-essential
   xorg
+  xdg-desktop-portal
+  xdg-desktop-portal-gtk
+  xdg-utils
+  gvfs
+  gvfs-backends
+  gvfs-fuse
 )
 
 check_environment() {
