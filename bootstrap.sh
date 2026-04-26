@@ -45,6 +45,8 @@ APT_PACKAGES=(
   pipewire-audio
   alsa-utils
   rtkit
+  bluetooth
+  rfkill
 )
 
 check_environment() {
@@ -144,6 +146,9 @@ run_cmds() {
   mkdir -p "$HOME/Pictures"
   background_image
   font_install
+
+  # systemd
+  sudo systemctl enable --now bluetooth
 }
 
 main() {
