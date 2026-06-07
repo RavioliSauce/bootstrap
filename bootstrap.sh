@@ -11,6 +11,114 @@ error() {
   exit 1
 }
 
+usage() {
+  cat <<'EOF'
+Usage: ./bootstrap.sh [--help [topic]]
+
+Bootstrap a Debian/Ubuntu-style desktop environment and apply dotfiles.
+
+Options:
+  -h, --help         Show this help and exit.
+  --help fstab       Show how to recreate the external-drive mounts.
+
+Before running:
+  export GITHUB_USERNAME=your-github-username
+
+What this script does:
+  - Installs apt packages for git, shell tools, bspwm, rofi, sxhkd, dunst,
+    polybar, picom, Alacritty, Thunar, Xorg, GVFS, PipeWire audio, Bluetooth,
+    and build tools.
+  - Installs GitHub CLI from the official apt repository if gh is missing.
+  - Installs uv, then uv tools: tldr and ruff.
+  - Runs chezmoi init --apply "$GITHUB_USERNAME" to apply dotfiles.
+  - Installs Tailscale, nvm LTS Node.js, and @openai/codex via npm.
+  - Downloads the desktop background to ~/Pictures/picture.jpg.
+  - Installs JetBrainsMono Nerd Font into ~/.local/share/fonts.
+  - Enables and starts the bluetooth systemd service.
+
+Manual steps after it finishes:
+  gh auth login
+  codex login --device-auth
+  sudo tailscale up
+
+Notes:
+  - This script uses sudo for apt, systemd, and repository setup.
+  - It downloads and executes upstream installer scripts for uv, chezmoi,
+    Tailscale, and nvm.
+  - Deno installation is currently disabled in the script.
+  - External-drive fstab mounts are not configured automatically. Run
+    ./bootstrap.sh --help fstab for the current manual setup.
+EOF
+}
+
+fstab_help() {
+  cat <<'EOF'
+Usage: ./bootstrap.sh --help fstab
+
+Current external-drive mount setup:
+
+  UUID=7e2ad205-d071-42a0-ba93-5d3c0fef354f /mnt/BigBoy ext4 defaults,nofail 0 2
+  UUID=f05a401e-a996-4758-84b8-e6883ee292bc /mnt/LittleGuy ext4 defaults,nofail 0 2
+
+What the fields mean:
+  - UUID=... identifies the filesystem, which is more stable than /dev/sdX.
+  - /mnt/BigBoy and /mnt/LittleGuy are the mount points.
+  - ext4 is the filesystem type.
+  - defaults,nofail uses normal mount options and allows boot to continue if
+    the external drive is disconnected.
+  - 0 disables dump.
+  - 2 lets fsck check these filesystems after the root filesystem.
+
+To recreate this on a fresh install:
+  sudo mkdir -p /mnt/BigBoy /mnt/LittleGuy
+  sudo cp /etc/fstab /etc/fstab.backup
+  sudoedit /etc/fstab
+
+Add these lines to /etc/fstab:
+  UUID=7e2ad205-d071-42a0-ba93-5d3c0fef354f /mnt/BigBoy ext4 defaults,nofail 0 2
+  UUID=f05a401e-a996-4758-84b8-e6883ee292bc /mnt/LittleGuy ext4 defaults,nofail 0 2
+
+Then test before rebooting:
+  sudo mount -a
+  findmnt --target /mnt/BigBoy
+  findmnt --target /mnt/LittleGuy
+
+Useful verification commands:
+  blkid
+  lsblk -f
+  findmnt -rn -S UUID=7e2ad205-d071-42a0-ba93-5d3c0fef354f
+  findmnt -rn -S UUID=f05a401e-a996-4758-84b8-e6883ee292bc
+
+If the UUIDs differ on another machine or after reformatting, use the UUIDs
+shown by blkid or lsblk -f instead of the ones above.
+EOF
+}
+
+handle_args() {
+  case "$#" in
+    0)
+      return 0
+      ;;
+    1)
+      case "$1" in
+        -h|--help)
+          usage
+          exit 0
+          ;;
+      esac
+      ;;
+    2)
+      if [[ "$1" == "--help" && "$2" == "fstab" ]]; then
+        fstab_help
+        exit 0
+      fi
+      ;;
+  esac
+
+  usage >&2
+  exit 1
+}
+
 APT_PACKAGES=(
   git
   curl
@@ -137,7 +245,7 @@ run_remote_scripts() {
 
   sh -c "$(curl -fsLS get.chezmoi.io/lb)" -- init --apply "$GITHUB_USERNAME"
   curl -fsSL https://tailscale.com/install.sh | sh
-  curl -fsSL https://deno.land/install.sh | sh
+  # curl -fsSL https://deno.land/install.sh | sh
   nvm_installs
   npm_installs
 }
@@ -152,6 +260,8 @@ run_cmds() {
 }
 
 main() {
+
+  handle_args "$@"
 
   check_environment GITHUB_USERNAME
 
