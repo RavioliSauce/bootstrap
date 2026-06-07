@@ -13,15 +13,16 @@ error() {
 
 usage() {
   cat <<'EOF'
-Usage: ./bootstrap.sh [--help [topic]]
+Usage: ./bootstrap.sh [--help [topic] | --setup-fstab]
 
 Bootstrap a Debian/Ubuntu-style desktop environment and apply dotfiles.
 
 Options:
   -h, --help         Show this help and exit.
   --help fstab       Show how to recreate the external-drive mounts.
+  --setup-fstab      Configure and mount the external drives.
 
-Before running:
+Before running the full bootstrap:
   export GITHUB_USERNAME=your-github-username
 
 What this script does:
@@ -42,18 +43,23 @@ Manual steps after it finishes:
   sudo tailscale up
 
 Notes:
+  - The full bootstrap targets a bspwm desktop. On an existing KDE Plasma
+    installation, apply the chezmoi files directly unless you also want that
+    desktop stack and its packages.
   - This script uses sudo for apt, systemd, and repository setup.
   - It downloads and executes upstream installer scripts for uv, chezmoi,
     Tailscale, and nvm.
   - Deno installation is currently disabled in the script.
-  - External-drive fstab mounts are not configured automatically. Run
-    ./bootstrap.sh --help fstab for the current manual setup.
+  - External-drive mounts are configured separately with --setup-fstab.
+    Run ./bootstrap.sh --help fstab for details.
 EOF
 }
 
 fstab_help() {
   cat <<'EOF'
-Usage: ./bootstrap.sh --help fstab
+Usage:
+  ./bootstrap.sh --setup-fstab
+  ./bootstrap.sh --help fstab
 
 Current external-drive mount setup:
 
@@ -69,7 +75,14 @@ What the fields mean:
   - 0 disables dump.
   - 2 lets fsck check these filesystems after the root filesystem.
 
-To recreate this on a fresh install:
+Automatic setup:
+  ./bootstrap.sh --setup-fstab
+
+The command verifies both UUIDs, refuses conflicting fstab entries, creates the
+mount points, makes a timestamped backup when changes are needed, adds only
+missing entries, and mounts the drives. It does not require GITHUB_USERNAME.
+
+Manual setup:
   sudo mkdir -p /mnt/BigBoy /mnt/LittleGuy
   sudo cp /etc/fstab /etc/fstab.backup
   sudoedit /etc/fstab
@@ -84,7 +97,7 @@ Then test before rebooting:
   findmnt --target /mnt/LittleGuy
 
 Useful verification commands:
-  blkid
+  sudo blkid
   lsblk -f
   findmnt -rn -S UUID=7e2ad205-d071-42a0-ba93-5d3c0fef354f
   findmnt -rn -S UUID=f05a401e-a996-4758-84b8-e6883ee292bc
@@ -92,6 +105,90 @@ Useful verification commands:
 If the UUIDs differ on another machine or after reformatting, use the UUIDs
 shown by blkid or lsblk -f instead of the ones above.
 EOF
+}
+
+fstab_entry_matches() {
+  local uuid="$1"
+  local target="$2"
+
+  awk -v source="UUID=$uuid" -v target="$target" '
+    $1 == source && $2 == target && $3 == "ext4" &&
+      $4 == "defaults,nofail" && $5 == "0" && $6 == "2" { found = 1 }
+    END { exit !found }
+  ' /etc/fstab
+}
+
+fstab_entry_conflicts() {
+  local uuid="$1"
+  local target="$2"
+
+  awk -v source="UUID=$uuid" -v target="$target" '
+    /^[[:space:]]*#/ { next }
+    ($1 == source || $2 == target) &&
+      !($1 == source && $2 == target && $3 == "ext4" &&
+        $4 == "defaults,nofail" && $5 == "0" && $6 == "2") { found = 1 }
+    END { exit !found }
+  ' /etc/fstab
+}
+
+setup_fstab() {
+  local backup
+  local entry
+  local uuid
+  local target
+  local -a entries=(
+    "7e2ad205-d071-42a0-ba93-5d3c0fef354f|/mnt/BigBoy"
+    "f05a401e-a996-4758-84b8-e6883ee292bc|/mnt/LittleGuy"
+  )
+  local -a missing=()
+
+  command -v sudo >/dev/null 2>&1 || error "sudo is required for --setup-fstab"
+  command -v lsblk >/dev/null 2>&1 || error "lsblk is required for --setup-fstab"
+  command -v mountpoint >/dev/null 2>&1 || error "mountpoint is required for --setup-fstab"
+
+  for entry in "${entries[@]}"; do
+    IFS='|' read -r uuid target <<<"$entry"
+
+    if ! lsblk -nr -o UUID | awk -v uuid="$uuid" '
+      $0 == uuid { found = 1 }
+      END { exit !found }
+    '; then
+      error "filesystem UUID $uuid for $target was not found; connect the drive and check lsblk -f"
+    fi
+
+    if fstab_entry_conflicts "$uuid" "$target"; then
+      error "conflicting /etc/fstab entry found for UUID=$uuid or $target; review it manually"
+    fi
+
+    if fstab_entry_matches "$uuid" "$target"; then
+      log "$target is already configured in /etc/fstab"
+    else
+      missing+=("UUID=$uuid $target ext4 defaults,nofail 0 2")
+    fi
+  done
+
+  sudo mkdir -p /mnt/BigBoy /mnt/LittleGuy
+
+  if ((${#missing[@]})); then
+    backup="$(sudo mktemp "/etc/fstab.backup.$(date +%Y%m%d-%H%M%S).XXXXXX")"
+    sudo cp --archive /etc/fstab "$backup"
+    printf '\n%s\n' "${missing[@]}" | sudo tee -a /etc/fstab >/dev/null
+    log "added ${#missing[@]} external-drive mount(s) to /etc/fstab"
+    log "backup created at $backup"
+    sudo systemctl daemon-reload
+  else
+    log "/etc/fstab already contains both external-drive mounts"
+  fi
+
+  for entry in "${entries[@]}"; do
+    IFS='|' read -r uuid target <<<"$entry"
+    if sudo mountpoint --quiet "$target"; then
+      log "$target is already mounted"
+    else
+      sudo mount "$target"
+      log "mounted $target"
+    fi
+  done
 }
 
 handle_args() {
@@ -103,6 +200,10 @@ handle_args() {
       case "$1" in
         -h|--help)
           usage
+          exit 0
+          ;;
+        --setup-fstab)
+          setup_fstab
           exit 0
           ;;
       esac
